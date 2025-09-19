@@ -1,1 +1,39 @@
+name: Build content on upload
 
+on:
+  push:
+    paths:
+      - "incoming/**.pdf"
+      - "incoming/**.txt"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pymupdf tqdm python-slugify openai
+
+      - name: Run pipeline
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: gpt-4.1
+        run: |
+          python scripts/generate_content.py
+
+      - name: Commit generated content
+        run: |
+          git config user.name "auto-content-bot"
+          git config user.email "bot@noreply.github.com"
+          git add content/
+          git commit -m "feat: auto-generated content"
+          git push
